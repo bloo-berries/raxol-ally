@@ -1,34 +1,34 @@
 # Ally
 
-A screen-reader-first AI terminal that makes images and web pages accessible. Reachable by SSH, speaking every token through a self-hosted [Otari](https://github.com/mozilla-ai/otari) gateway, using only open-weight vision models.
+A screen-reader-first (computer vision) AI terminal that makes images and web pages accessible. Reachable by SSH, speaking every token through an [Otari](https://github.com/mozilla-ai/otari) gateway (hosted or self-hosted), using only open-weight vision models.
 
 Built for the [MozFest Developers Wilding](https://otari.ai/devs-wilding) hackathon.
 
 ## Three Pillars
 
-**Describe**: Point it at an image (path or URL) and get WCAG-style alt text, a long description, and decorative-image detection. Powered by open VLMs behind a self-hosted Otari gateway with failover routing.
+**Describe**: Point it at an image (path or URL) and get WCAG-style alt text, a long description, and decorative-image detection. Powered by open VLMs (Alibaba Qwen 3.5) behind an Otari gateway.
 
-**Audit**: Point it at a URL. Ally finds images missing alt text, generates candidates, and produces an accessible linear summary of the page read through Otari's web fetch tool.
+**Audit**: Point it at a URL. Ally fetches the page, finds all images, checks which have alt text, and generates candidates for those that don't. With web fetch enabled, it also produces an accessible linear summary.
 
-**Speak**: The interface itself is the accessibility statement: keyboard-only, a linear screen-reader mode (no box-drawing noise), and one codebase serving the terminal directly or over SSH, with MCP tool definitions ready for an agent surface.
+**Speak**: The interface itself is the accessibility statement: keyboard-only, a linear screen-reader mode (no box-drawing noise), and one codebase serving the terminal directly or over SSH.
 
 ## Architecture
 
 ```
 ssh / terminal / (browser) ---> Ally (raxol TEA app)
-                                   | per-tenant tk- virtual key
+                                   | per-tenant virtual key
                                    v
-                        Self-hosted Otari (docker compose,
-                        --profile guardrails --profile code-exec)
-                                   | model: ally-failover (routing policy)
+                        Otari gateway (hosted or self-hosted)
+                                   | open-weight VLM routing
                            +-------+--------+
-                     open VLM #1       open VLM #2 (different provider)
+                     open VLM #1       open VLM #2
+              (e.g. Qwen 3.5 397B)  (e.g. Qwen 3.5 35B)
 ```
 
 ## Tech Stack
 
 - **[Raxol](https://github.com/DROOdotFOO/raxol)**: Elixir TUI framework with TEA architecture, multi-surface rendering (terminal, SSH, LiveView, MCP)
-- **[Otari](https://github.com/mozilla-ai/otari)**: Self-hosted AI gateway with routing, budgets, guardrails, web search, and code execution
+- **[Otari](https://github.com/mozilla-ai/otari)**: AI gateway (hosted or self-hosted) with routing, budgets, guardrails, web search, and code execution
 - **Vision prompts** adapted from [AltText Guardian](https://github.com/bloo-berries/AltText-Guardian)
 
 ## Otari Features Used
@@ -37,23 +37,23 @@ Each row names where the feature is exercised in the app, not just enabled on th
 
 | Feature | Where it is used in Ally |
 |---------|--------------------------|
-| Open-weight models | Two open VLMs: one for alt text / long descriptions, one for decorative classification (`lib/ally/vision/pipeline.ex`) |
-| Model routing / failover | Alt-text requests name the `ally-failover` routing policy as their model; Otari fails over server-side. `Otari-Fallback` and `Otari-Attempt-Count` are parsed in `lib/ally/otari/client.ex` and shown as `[FALLBACK]` in the TUI |
-| Multiple models, distinct roles | `ALLY_DECORATIVE_MODEL` classifies decorative vs. informative; the routing policy's VLM writes the description. The TUI shows both model names per result |
-| Web fetch | Audit screen asks a model to read the page via `otari_web_fetch` and write a linear screen-reader summary; the fetch Otari ran is read back from `otari_tool_calls` (`lib/ally/audit/scanner.ex`) |
-| Code execution | Contrast screen declares `otari_code_execution`; the sandbox runs the WCAG luminance math and its stdout/exit code are shown from `otari_tool_calls` (`lib/ally/tools/contrast_checker.ex`) |
+| Open-weight models | Alibaba Qwen 3.5 VLMs for alt text generation and decorative classification (`lib/ally/vision/pipeline.ex`) |
+| Multiple models, distinct roles | `ALLY_PRIMARY_MODEL` (Qwen 3.5 397B) writes descriptions; `ALLY_DECORATIVE_MODEL` (Qwen 3.5 35B) classifies decorative vs. informative. The TUI shows both model names per result |
+| Model routing / fallback | `Otari-Fallback` and `Otari-Attempt-Count` headers are parsed in `lib/ally/otari/client.ex` and shown as `[FALLBACK]` in the TUI. Self-hosted deployments can define a named failover routing policy |
+| Web fetch | Audit screen requests a page summary via `otari_web_fetch`; the fetch Otari ran is read back from `otari_tool_calls` (`lib/ally/audit/scanner.ex`). Requires web fetch enabled on the gateway |
+| Code execution | Contrast screen declares `otari_code_execution`; the sandbox runs WCAG luminance math and its stdout/exit code are shown from `otari_tool_calls` (`lib/ally/tools/contrast_checker.ex`) |
 | Guardrails | Every completion carries a `guardrails` entry (`ALLY_GUARDRAIL_PROFILE`); the `Otari-Guardrails` verdict is shown next to each result, and `block` mode surfaces the 403 |
-| Budgets and spending limits | The status bar reads `GET /api/v1/key/budget` on start and after every call ("Budget: $0.19 remaining of $0.50 (user), resets ..."); a `403 budget_exceeded` is shown with its scope and `Retry-After` |
+| Budgets and spending limits | The status bar reads `GET /api/v1/key/budget` on start and after every call; a `403 budget_exceeded` is shown with its scope and `Retry-After` |
 | Usage / cost observability | Per-call cost (`usage.cost_usd`) shown in the TUI |
 
-Not wired yet: MCP transport (`lib/ally/mcp/server.ex` holds tool definitions only) and per-SSH-key virtual keys (`lib/ally/ssh/server.ex` mints them, but the SSH listener runs anonymous so every session uses `OTARI_API_KEY`).
+Implementation notes: MCP tool definitions exist in `lib/ally/mcp/server.ex` (no transport layer yet). Per-SSH-key virtual key minting is implemented in `lib/ally/ssh/server.ex` but the SSH listener currently runs anonymous, so every session uses `OTARI_API_KEY`.
 
 ## Quick Start
 
 ### Requirements
 
 - Elixir 1.17+ / OTP 27+
-- A running self-hosted Otari instance (see below)
+- An Otari gateway: either [hosted](https://otari.ai) or [self-hosted](https://github.com/mozilla-ai/otari)
 
 ### Run the TUI
 
