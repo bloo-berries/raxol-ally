@@ -4,6 +4,9 @@ A screen-reader-first (computer vision) AI terminal that makes images and web pa
 
 Built for the [MozFest Developers Wilding](https://otari.ai/devs-wilding) hackathon.
 
+<img width="833" height="705" alt="demo-screenshot" src="https://github.com/user-attachments/assets/907c73d0-eb92-43ed-bdf5-569bfa5bdb28" />
+
+
 ## Three Pillars
 
 **Describe**: Point it at an image (path or URL) and get WCAG-style alt text, a long description, and decorative-image detection. Powered by open VLMs (Alibaba Qwen 3.5) behind an Otari gateway.
