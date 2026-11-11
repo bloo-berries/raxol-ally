@@ -2,6 +2,8 @@
 
 A screen-reader-first (computer vision) AI terminal that makes images and web pages accessible. Reachable by SSH, speaking every token through an [Otari](https://github.com/mozilla-ai/otari) gateway (hosted or self-hosted), using only open-weight vision models.
 
+<video src="https://github.com/bloo-berries/raxol-ally/releases/download/v0.1.0-demo/Raxol-Ally-Otari-Demo.mp4" controls width="100%"></video>
+
 Built for the [MozFest Developers Wilding](https://otari.ai/devs-wilding) hackathon.
 
 <img width="833" height="705" alt="demo-screenshot" src="https://github.com/user-attachments/assets/907c73d0-eb92-43ed-bdf5-569bfa5bdb28" />
