@@ -1,4 +1,4 @@
-# Ally — Development TODO
+# Ally Development TODO
 
 ## Current Rubric Score: ~22/100
 
@@ -14,29 +14,29 @@
 
 ## Critical Bugs (Fix First)
 
-- [ ] **Client ignores Application config** — `Ally.Otari.Client` reads `System.get_env` directly instead of `Application.get_env(:ally, ...)`. The `config/config.exs` and `config/runtime.exs` values are dead code. Unify to use Application config with env var fallbacks in `runtime.exs`.
-- [ ] **`cost: nil` hardcoded** — Otari returns `usage.cost_usd`, `usage.prompt_tokens`, `usage.completion_tokens` in every chat completion response. The client discards the entire `usage` object. Extract and surface it.
-- [ ] **Supervisor children commented out** — `Ally.Application` starts an empty supervisor. Both `Otari.Client` and `SSH.Server` are commented out. Nothing Otari-related is supervised.
-- [ ] **`mime` not declared in mix.exs** — `MIME.from_path/1` is used in `pipeline.ex` but `:mime` is only a transitive dep of `:req`. Declare it explicitly.
-- [ ] **Audit screen Enter key missing** — The `:audit` screen renders an input prompt but `update/2` has no `%Event{key: :enter}` clause for `:audit` state. Pressing Enter does nothing.
-- [ ] **Decorative classification fragile** — `String.starts_with?(String.upcase(text), "DECORATIVE")` will miss models that output `"The image is decorative"` or `"DECORATIVE."` with leading whitespace. Trim and use regex.
+- [ ] **Client ignores Application config**: `Ally.Otari.Client` reads `System.get_env` directly instead of `Application.get_env(:ally, ...)`. The `config/config.exs` and `config/runtime.exs` values are dead code. Unify to use Application config with env var fallbacks in `runtime.exs`.
+- [ ] **`cost: nil` hardcoded**: Otari returns `usage.cost_usd`, `usage.prompt_tokens`, `usage.completion_tokens` in every chat completion response. The client discards the entire `usage` object. Extract and surface it.
+- [ ] **Supervisor children commented out**: `Ally.Application` starts an empty supervisor. Both `Otari.Client` and `SSH.Server` are commented out. Nothing Otari-related is supervised.
+- [ ] **`mime` not declared in mix.exs**: `MIME.from_path/1` is used in `pipeline.ex` but `:mime` is only a transitive dep of `:req`. Declare it explicitly.
+- [ ] **Audit screen Enter key missing**: The `:audit` screen renders an input prompt but `update/2` has no `%Event{key: :enter}` clause for `:audit` state. Pressing Enter does nothing.
+- [ ] **Decorative classification fragile**: `String.starts_with?(String.upcase(text), "DECORATIVE")` will miss models that output `"The image is decorative"` or `"DECORATIVE."` with leading whitespace. Trim and use regex.
 
 ---
 
-## Tier 1 — High Impact, Low Effort (10 pts each)
+## Tier 1: High Impact, Low Effort (10 pts each)
 
 ### 1. Model Routing and Fallbacks (10 pts)
 
 **Current**: No retry, no failover. A single failed request returns an error.
 
 **What to build**:
-- Add retry logic in `Client.vision_completion/3` — on error or non-200, retry with `fallback_model`
+- Add retry logic in `Client.vision_completion/3`: on error or non-200, retry with `fallback_model`
 - Read the `Otari-Fallback` response header to confirm fallback was used
 - Surface `Otari-Provider`, `Otari-Model`, `Otari-Attempt-Count` headers in the result
-- **OR** configure a named routing policy in Otari's config and pass it via `Otari-Router` request header — the gateway handles failover server-side, which is cleaner and more demonstrable
+- **OR** configure a named routing policy in Otari's config and send its name as `model`; the gateway handles failover server-side, which is cleaner and more demonstrable
 
 **Otari API**:
-- `POST /api/v1/routing/policies` — create a failover policy
+- `POST /api/v1/routing/policies`: create a failover policy
 - `Otari-Router: <policy-name>` header on chat completions
 - Response includes `Otari-Fallback: true` when failover fired
 
@@ -64,20 +64,20 @@
 **What to build**:
 - Enable the `guardrails` Docker Compose profile on self-hosted Otari
 - Register a guardrail via `POST /api/v1/organizations/me/guardrails` with an appropriate profile (e.g., PIGuard for prompt injection, or a custom definition for alt-text quality)
-- Otari applies guardrails automatically on gated requests — no client code change needed beyond enabling
+- Otari applies guardrails automatically on gated requests; no client code change needed beyond enabling
 - **Or**: Pass generated descriptions through `POST .../guardrails/{id}/test` as a validation step before displaying to the user
 - Show guardrail blocks/monitors in the Otari dashboard during the demo
 
 **Otari API**:
-- `POST /api/v1/organizations/me/guardrails` — register guardrail
-- `POST /api/v1/organizations/me/guardrails/{id}/test` — test a string
+- `POST /api/v1/organizations/me/guardrails`: register guardrail
+- `POST /api/v1/organizations/me/guardrails/{id}/test`: test a string
 - Profile catalog: `GET /api/v1/tool-settings/guardrails/profiles`
 
 ---
 
-## Tier 2 — High Impact, Moderate Effort (10 pts each)
+## Tier 2: High Impact, Moderate Effort (10 pts each)
 
-### 4. Web Search / Web Fetch — Audit Pillar (10 pts)
+### 4. Web Search / Web Fetch: Audit Pillar (10 pts)
 
 **Current**: Audit screen says "(coming soon)". No HTML parsing, no missing-alt-text detection.
 
@@ -112,17 +112,17 @@
 - Budget enforcement: Otari enforces budgets server-side on virtual keys. Handle `403 budget_exceeded` in the client gracefully (display "Budget exceeded, contact admin").
 
 **Otari API**:
-- `POST /api/v1/keys` — create virtual key with `allowed_models`, `metadata`
-- `POST /api/v1/budgets` — create a budget with `max_budget` USD ceiling
+- `POST /api/v1/keys`: create virtual key with `allowed_models`, `metadata`
+- `POST /api/v1/budgets`: create a budget with `max_budget` USD ceiling
 - Key creation can reference a `budget_id` via scoped budgets
 - Service key + `PUT /api/v1/keys/{id}/end-users/{external_id}` with `{budget_id}` for per-SSH-user budgets
-- `GET /api/v1/end-users/{id}/budget` — check remaining budget
+- `GET /api/v1/end-users/{id}/budget`: check remaining budget
 
 **This covers two rubric features**: "Budgets and spending limits" (10 pts) + "Per-user budgets" (10 pts).
 
 ---
 
-## Tier 3 — High Impact, Heavy Lift (10 pts each)
+## Tier 3: High Impact, Heavy Lift (10 pts each)
 
 ### 6. Code Execution (10 pts)
 
@@ -147,23 +147,23 @@
 
 **Current**: Zero MCP code. Not mentioned in any source file.
 
-**What to build** — two angles, pick one or both:
+**What to build**: two angles, pick one or both:
 
-**Option A — Ally as MCP client (use Otari's managed MCP)**:
+**Option A: Ally as MCP client (use Otari's managed MCP)**:
 - Register an MCP server in Otari (e.g., a WCAG reference server, or the accessibility tools MCP)
 - Pass `mcp_server_ids` in chat completion requests
 - Otari manages the tool loop
 
-**Option B — Ally as MCP server (Raxol has built-in MCP)**:
+**Option B: Ally as MCP server (Raxol has built-in MCP)**:
 - Raxol already ships `raxol_mcp` package
 - Expose Ally's describe/audit capabilities as MCP tools
 - An external agent can drive Ally: "describe this image", "audit this URL"
 - Demo: Claude Code or another agent calling Ally via MCP
 
 **Otari API (Option A)**:
-- `POST /api/v1/workspaces/{id}/mcp-servers` — register external MCP server
-- `GET /api/v1/mcp/servers/{id}/tools` — discover available tools
-- `POST /api/v1/mcp/execute` — execute a tool call
+- `POST /api/v1/workspaces/{id}/mcp-servers`: register external MCP server
+- `GET /api/v1/mcp/servers/{id}/tools`: discover available tools
+- `POST /api/v1/mcp/execute`: execute a tool call
 - Or pass `mcp_server_ids` in the chat completions body for managed loop
 
 ---
@@ -181,10 +181,10 @@
 - [ ] Surface cost per request in the TUI
 
 ### Error Handling
-- [ ] Handle `403 budget_exceeded` specifically — show user-friendly message + `Retry-After`
-- [ ] Handle `424 provider_credential_rejected` — alert, don't retry
-- [ ] Handle `429 rate_limited` / `upstream_rate_limited` — respect `Retry-After`
-- [ ] Handle `502 provider_error` — trigger fallback
+- [ ] Handle `403 budget_exceeded` specifically: show user-friendly message + `Retry-After`
+- [ ] Handle `424 provider_credential_rejected`: alert, don't retry
+- [ ] Handle `429 rate_limited` / `upstream_rate_limited`: respect `Retry-After`
+- [ ] Handle `502 provider_error`: trigger fallback
 - [ ] Log `Otari-Request-ID` on every call for debugging
 
 ### Test Coverage
