@@ -2,22 +2,45 @@ defmodule Ally.Application do
   @moduledoc false
   use Application
 
+  alias Ally.Config
+
   @impl true
   def start(_type, _args) do
-    children = [
-      # Otari API client pool
-      # {Ally.Otari.Client, []},
-
-      # SSH server (multi-tenant, per-pubkey virtual keys)
-      # {Ally.SSH.Server, port: ssh_port()},
-    ]
+    children =
+      [
+        # Per-tenant SSH key -> virtual key registry
+        {Ally.SSH.Server, []}
+      ] ++ ssh_children()
 
     opts = [strategy: :one_for_one, name: Ally.Supervisor]
     Supervisor.start_link(children, opts)
   end
 
-  @doc false
-  def ssh_port do
-    System.get_env("ALLY_SSH_PORT", "2222") |> String.to_integer()
+  # Serves the TUI over SSH on loopback: `ssh localhost -p $ALLY_SSH_PORT`.
+  # Anonymous for the demo, so Raxol requires every resource cap explicitly
+  # and refuses non-loopback binds without :anonymous_public.
+  defp ssh_children do
+    if Config.ssh_enabled?() do
+      [
+        %{
+          id: Ally.SSH.Listener,
+          start:
+            {Raxol.SSH, :serve,
+             [
+               Ally.App,
+               [
+                 port: Config.ssh_port(),
+                 allow_anonymous: true,
+                 max_connections: 10,
+                 max_per_ip: 4,
+                 idle_timeout: :timer.minutes(10),
+                 max_session_duration: :timer.hours(1)
+               ]
+             ]}
+        }
+      ]
+    else
+      []
+    end
   end
 end

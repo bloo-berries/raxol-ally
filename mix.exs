@@ -22,7 +22,7 @@ defmodule Ally.MixProject do
 
   defp deps do
     [
-      # TUI framework — SSH, terminal, LiveView surfaces
+      # TUI framework: SSH, terminal, LiveView surfaces
       {:raxol, github: "DROOdotFOO/raxol", branch: "master"},
 
       # HTTP client for Otari gateway
@@ -30,6 +30,12 @@ defmodule Ally.MixProject do
 
       # JSON
       {:jason, "~> 1.4"},
+
+      # MIME type detection (used in vision pipeline)
+      {:mime, "~> 2.0"},
+
+      # HTML parsing (used in audit pillar)
+      {:floki, "~> 0.36"},
 
       # Dev/test
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},

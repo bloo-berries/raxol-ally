@@ -3,9 +3,9 @@ defmodule Ally.Vision.Prompts do
   WCAG-style vision prompts for open VLMs, adapted from AltText Guardian.
 
   Three modes:
-  - `:alt_text`   — concise 2-4 sentence alt text
-  - `:long_desc`  — detailed description for complex images
-  - `:decorative` — classify whether the image is purely decorative
+  - `:alt_text`: concise 2-4 sentence alt text
+  - `:long_desc`: detailed description for complex images
+  - `:decorative`: classify whether the image is purely decorative
   """
 
   @alt_text_prompt """
