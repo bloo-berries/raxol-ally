@@ -49,6 +49,12 @@ Each row names where the feature is exercised in the app, not just enabled on th
 | Budgets and spending limits | The status bar reads `GET /api/v1/key/budget` on start and after every call; a `403 budget_exceeded` is shown with its scope and `Retry-After` |
 | Usage / cost observability | Per-call cost (`usage.cost_usd`) shown in the TUI |
 
+Audit Feature: 
+
+<img width="695" height="679" alt="audit-feature" src="https://github.com/user-attachments/assets/10820be6-3c55-4e40-9398-8fa3871ad554" />
+
+
+
 Implementation notes: MCP tool definitions exist in `lib/ally/mcp/server.ex` (no transport layer yet). Per-SSH-key virtual key minting is implemented in `lib/ally/ssh/server.ex` but the SSH listener currently runs anonymous, so every session uses `OTARI_API_KEY`.
 
 ## Quick Start
